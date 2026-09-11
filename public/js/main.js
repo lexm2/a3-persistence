@@ -23,15 +23,20 @@ const render = function (data) {
 }
 
 const cardFor = function (row) {
-  const li = document.createElement('li')
-  li.className = 'card'
-  
-  
+  const card = document.createElement('article')
+
+  const header = document.createElement('header')
+  header.className = 'card__header'
+
+  const title = document.createElement('h2')
+  title.className = 'card__title'
+  title.textContent = row.theory
+
   const actions = document.createElement('div')
   actions.className = 'card__actions'
 
   const edit = document.createElement('button')
-  edit.className = 'card__edit'
+  edit.className = 'outline'
   edit.type = 'button'
   edit.textContent = 'Edit'
   edit.onclick = function () {
@@ -39,9 +44,10 @@ const cardFor = function (row) {
   }
 
   const del = document.createElement('button')
-  del.className = 'card__delete'
+  del.className = 'outline secondary'
   del.type = 'button'
-  del.textContent = 'X'
+  del.textContent = 'Delete'
+  del.setAttribute('aria-label', 'Delete ' + row.theory)
   del.dataset.id = row.id
   del.onclick = remove
 
@@ -49,25 +55,19 @@ const cardFor = function (row) {
   // only the owner gets edit / delete
   actions.hidden = !row.mine
 
-  const title = document.createElement('h2')
-  title.className = 'card__title'
-  title.textContent = row.theory
+  header.append(title, actions)
 
   const verdict = document.createElement('p')
   verdict.className = 'verdict verdict--' + row.verdict.toLowerCase()
   verdict.textContent = row.verdict
 
-  const meter = document.createElement('div')
-  meter.className = 'meter'
+  const meter = document.createElement('progress')
+  meter.max = 100
+  meter.value = row.exposureOdds * 100
+  meter.setAttribute('aria-label', 'Chance the conspiracy has leaked')
 
-  const fill = document.createElement('div')
-  fill.className = 'meter__fill'
-  fill.style.width = (row.exposureOdds * 100).toFixed(1) + '%'
-  meter.appendChild(fill)
-
-  li.append(
-    actions,
-    title,
+  card.append(
+    header,
     verdict,
     line('posted by ' + row.username),
     line(row.conspirators.toLocaleString() + ' conspirators'),
@@ -77,7 +77,7 @@ const cardFor = function (row) {
     line('expected reveal in ' + formatYears(row.yearsUntilExposed))
   )
 
-  return li
+  return card
 }
 
 const line = function (text) {
@@ -95,14 +95,20 @@ const formatYears = function (years) {
   return Math.round(years).toLocaleString() + ' years'
 }
 
+const openDialog = function () {
+  document.querySelector('#entryDialog').showModal()
+  document.querySelector('#theory').focus()
+}
+
 const startEdit = function (row) {
   editing = row.id
 
   document.querySelector('#theory').value = row.theory
   document.querySelector('#conspirators').value = row.conspirators
   document.querySelector('#yearsRunning').value = row.yearsRunning
-  document.querySelector('#submit').value = 'Save Changes'
-  document.querySelector('#entryForm').hidden = false
+  document.querySelector('#formTitle').textContent = 'Edit Conspiracy'
+  document.querySelector('#submit').textContent = 'Save Changes'
+  openDialog()
 }
 
 const remove = async function (event) {
@@ -122,8 +128,7 @@ const submit = async function (event) {
   // remains to this day
   event.preventDefault()
 
-  const form = document.querySelector('#entryForm'),
-    theory = document.querySelector('#theory'),
+  const theory = document.querySelector('#theory'),
     conspirators = document.querySelector('#conspirators'),
     yearsRunning = document.querySelector('#yearsRunning')
 
@@ -141,9 +146,7 @@ const submit = async function (event) {
     body: JSON.stringify(json)
   })
 
-  const data = await response.json()
-  render(data)
-
+  render(await response.json())
   reset()
 }
 
@@ -151,23 +154,18 @@ const reset = function () {
   editing = null
 
   document.querySelector('#entryForm').reset()
-  document.querySelector('#submit').value = 'Add Conspiracy'
-  document.querySelector('#entryForm').hidden = true
+  document.querySelector('#formTitle').textContent = 'New Conspiracy'
+  document.querySelector('#submit').textContent = 'Add Conspiracy'
+  document.querySelector('#entryDialog').close()
 }
 
 window.onload = function () {
-  const form = document.querySelector('#entryForm'),
-    newBtn = document.querySelector('#newBtn'),
-    submitBtn = document.querySelector('#submit')
-
-  newBtn.onclick = function () {
-    const wasHidden = form.hidden
-
+  document.querySelector('#newBtn').onclick = function () {
     reset()
-    form.hidden = !wasHidden
+    openDialog()
   }
-
-  submitBtn.onclick = submit
+  document.querySelector('#cancel').onclick = reset
+  document.querySelector('#entryForm').onsubmit = submit
 
   // the server sends new accounts here with ?created=1
   if (new URLSearchParams(location.search).get('created') === '1') {

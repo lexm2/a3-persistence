@@ -117,6 +117,7 @@ app.get(["/", "/index.html"], requireLogin, function (request, response) {
   response.sendFile(path.join(__dirname, "public", "index.html"));
 });
 app.use(express.static("public", { index: false }));
+app.use("/css/pico", express.static(path.join(__dirname, "node_modules/@picocss/pico/css")));
 
 // ---------- auth routes ----------
 
