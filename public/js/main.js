@@ -103,7 +103,7 @@ const remove = async function (event) {
   const response = await fetch('/api/delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: Number(event.target.dataset.id) })
+    body: JSON.stringify({ id: event.target.dataset.id })
   })
 
   render(await response.json())
