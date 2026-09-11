@@ -1,0 +1,175 @@
+:root {
+  /* Adobe Color theme */
+  --teal: #00919C;
+  --amber: #9C5A00;
+  --rust: #9C2400;
+  --bg: #1A3133;
+  --panel: #33281A;
+
+  --line: rgba(255, 255, 255, 0.14);
+  --text: #F0EBE4;
+  --muted: #B0A597;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ---------- page layout ---------- */
+
+body {
+  margin: 0;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+#list {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- buttons ---------- */
+
+button,
+input[type="button"] {
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--teal);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover,
+input[type="button"]:hover {
+  background: var(--teal);
+  color: var(--bg);
+}
+
+/* ---------- entry form ---------- */
+
+#entryForm {
+  width: 100%;
+  max-width: 26rem;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid var(--teal);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+#entryForm h1 {
+  font-size: 1.25rem;
+}
+
+#entryForm label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+#entryForm input {
+  margin-bottom: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+/* ---------- result cards ---------- */
+
+.card {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.card__title {
+  margin: 0 0 0.5rem;
+  padding-right: 5rem;
+  font-size: 1.05rem;
+}
+
+.card__actions {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.card__edit,
+.card__delete {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.8rem;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.card__edit:hover {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--bg);
+}
+
+.card__delete:hover {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: var(--bg);
+}
+
+.card__line {
+  margin: 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.meter {
+  height: 6px;
+  margin: 0.9rem 0;
+  border-radius: 10px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  background: var(--teal);
+}
+
+.verdict {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.verdict--airtight { color: var(--teal); }
+.verdict--holding  { color: var(--teal); }
+.verdict--leaking  { color: var(--amber); }
+.verdict--busted   { color: var(--rust); }
+
+/* makes sure the hidden attribute is winning over #entryForm display */
+[hidden] {
+  display: none !important;
+}

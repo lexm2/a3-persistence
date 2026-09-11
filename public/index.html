@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang='en'>
+  <head>
+    <title>CS4241 Assignment 2</title>
+    <meta charset='utf-8' />
+    <script defer src='js/main.js'></script>
+    <link rel='stylesheet' href='css/main.css' />
+    
+    <!-- get rid of favicon error -->
+    <link rel='icon' href='data:;base64,iVBORw0KGgo=' />
+  </head>
+  <body>
+    <h1> Conspiracy Viability Calculator </h1>
+    <ul id="list"></ul>
+    <button id="newBtn" type="button">New Conspiracy +</button>
+    <form id="entryForm" hidden>
+      <h1>New Conspiracy</h1>
+      <label for="theory">Theory</label>
+      <input type="text"  id="theory" name="theory">
+      <label for="conspirators">Conspirators</label>
+      <input type="number" id="conspirators" name="conspirators">
+      <label for="yearsRunning">Years Running</label>
+      <input type="number" id="yearsRunning" name="yearsRunning">
+      <input type="button" id="submit" value="Add Conspiracy">
+    </form>
+  </body>
+</html>
