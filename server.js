@@ -1,10 +1,5 @@
-const http = require("http"),
-  fs = require("fs"),
-  // IMPORTANT: you must run `npm install` in the directory for this assignment
-  // to install the mime library if you're testing this on your local machine.
-  // On Render, make sure `npm install` is your build command.
-  mime = require("mime"),
-  dir = "public/",
+const express = require("express"),
+  app = express(),
   port = 3000;
 
 // Grimes probability
@@ -54,69 +49,29 @@ const buildRow = function (id, body) {
   { theory: "Roommate ate my leftovers", conspirators: 1, yearsRunning: 0.02 },
 ].forEach((seed) => appdata.push(buildRow(nextID++, seed)));
 
-const server = http.createServer(function (request, response) {
-  if (request.method === "GET") {
-    handleGet(request, response);
-  } else if (request.method === "POST") {
-    handlePost(request, response);
-  }
+// serve everything in public/ (index.html at "/") and parse JSON bodies
+app.use(express.static("public"));
+app.use(express.json());
+
+app.get("/api/data", function (request, response) {
+  response.json(appdata);
 });
 
-const handleGet = function (request, response) {
-  const filename = dir + request.url.slice(1);
+app.post("/api/add", function (request, response) {
+  appdata.push(buildRow(nextID++, request.body));
+  response.json(appdata);
+});
 
-  if (request.url === "/") {
-    sendFile(response, "public/index.html");
-  } else if (request.url === "/api/data") {
-    sendJSON(response, appdata);
-  } else {
-    sendFile(response, filename);
-  }
-};
+app.post("/api/edit", function (request, response) {
+  const index = findIndexByID(request.body.id);
+  if (index !== -1) appdata[index] = buildRow(request.body.id, request.body);
+  response.json(appdata);
+});
 
-const handlePost = function (request, response) {
-  let dataString = "";
+app.post("/api/delete", function (request, response) {
+  const index = findIndexByID(request.body.id);
+  if (index !== -1) appdata.splice(index, 1);
+  response.json(appdata);
+});
 
-  request.on("data", function (data) {
-    dataString += data;
-  });
-
-  request.on("end", function () {
-    const body = JSON.parse(dataString);
-
-    if (request.url === "/api/add") {
-      appdata.push(buildRow(nextID++, body));
-    } else if (request.url === "/api/edit") {
-      const index = findIndexByID(body.id);
-      if (index !== -1) appdata[index] = buildRow(body.id, body);
-    } else if (request.url === "/api/delete") {
-      const index = findIndexByID(body.id);
-      if (index !== -1) appdata.splice(index, 1);
-    }
-
-    sendJSON(response, appdata);
-  });
-};
-
-const sendJSON = function (response, data) {
-  response.writeHead(200, { "Content-Type": "application/json" });
-  response.end(JSON.stringify(data));
-};
-
-const sendFile = function (response, filename) {
-  const type = mime.getType(filename);
-  // if the error = null, then we've loaded the file successfully
-  fs.readFile(filename, function (err, content) {
-    if (err === null) {
-      // status code: https://httpstatuses.com
-      response.writeHead(200, { "Content-Type": type });
-      response.end(content);
-    } else {
-      // file not found, error code 404
-      response.writeHead(404);
-      response.end("404 Error: File Not Found");
-    }
-  });
-};
-
-server.listen(process.env.PORT || port);
+app.listen(process.env.PORT || port);

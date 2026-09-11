@@ -1,15 +1,15 @@
 {
-  "name": "a2-lexmoulton",
+  "name": "a3-lexmoulton",
   "version": "0.1.0",
-  "description": "WPI CS 4241 second assignment - Lex Moulton",
+  "description": "WPI CS 4241 third assignment - Lex Moulton",
   "author": "Lex Moulton",
   "scripts": {
     "start": "node server.js"
   },
-  "dependencies": {
-    "mime": "^2.4.4"
-  },
   "engines": {
     "node": "24.x"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }
