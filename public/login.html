@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang='en'>
+  <head>
+    <title>Conspiracy Viability Calculator</title>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <link rel='stylesheet' href='css/main.css' />
+    <link rel='icon' href='data:;base64,iVBORw0KGgo=' />
+  </head>
+  <body>
+    <h1>Conspiracy Viability Calculator</h1>
+    <form id="loginForm" class="panel" method="post" action="/login">
+      <h2>Log in</h2>
+      <p id="error" class="notice notice--error" hidden></p>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autocomplete="username">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password">
+      <button type="submit">Log in</button>
+    </form>
+    <script>
+      const messages = {
+        missing: 'Please enter both a username and a password.',
+        password: 'Wrong password for that username.'
+      }
+      const error = new URLSearchParams(location.search).get('error')
+      if (error in messages) {
+        const p = document.querySelector('#error')
+        p.textContent = messages[error]
+        p.hidden = false
+      }
+    </script>
+  </body>
+</html>

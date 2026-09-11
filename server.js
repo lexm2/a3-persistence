@@ -1,6 +1,10 @@
 require("dotenv").config();
 
 const express = require("express"),
+  session = require("express-session"),
+  { MongoStore } = require("connect-mongo"),
+  bcrypt = require("bcryptjs"),
+  path = require("path"),
   { MongoClient, ObjectId } = require("mongodb"),
   app = express(),
   port = 3000;
@@ -29,20 +33,20 @@ const verdictFor = function (odds) {
   return "BUSTED";
 };
 
-const buildRow = function (body) {
+const buildRow = function (body, owner) {
   const theory = String(body.theory || "").trim() || "untitled";
   const conspirators = Math.max(1, Math.round(Number(body.conspirators)) || 1);
   const yearsRunning = Math.max(0, Number(body.yearsRunning) || 0);
 
   return Object.assign(
-    { theory, conspirators, yearsRunning },
+    { userId: owner._id, username: owner.username, theory, conspirators, yearsRunning },
     deriveFields(conspirators, yearsRunning),
   );
 };
 
-const toClient = function (doc) {
-  const { _id, ...rest } = doc;
-  return { id: _id.toString(), ...rest };
+const toClient = function (doc, viewerId) {
+  const { _id, userId, ...rest } = doc;
+  return { id: _id.toString(), mine: userId.equals(viewerId), ...rest };
 };
 
 const parseID = function (id) {
@@ -54,57 +58,125 @@ const parseID = function (id) {
 };
 
 const client = new MongoClient(process.env.MONGODB_URI);
-let collection = null;
+let users = null,
+  conspiracies = null;
 
 const connect = async function () {
   await client.connect();
-  collection = client.db(process.env.MONGODB_DB || "a3").collection("conspiracies");
+  const db = client.db(process.env.MONGODB_DB || "a3");
+  users = db.collection("users");
+  conspiracies = db.collection("conspiracies");
 
-  // seed a fresh db
-  if ((await collection.countDocuments()) === 0) {
-    await collection.insertMany(
-      [
-        { theory: "Moon landing was faked", conspirators: 411000, yearsRunning: 57 },
-        { theory: "Birds are drones", conspirators: 12000, yearsRunning: 45 },
-        { theory: "Roommate ate my leftovers", conspirators: 1, yearsRunning: 0.02 },
-      ].map(buildRow),
-    );
+  await users.createIndex({ username: 1 }, { unique: true });
+  await conspiracies.createIndex({ userId: 1 });
+};
+
+// ---------- auth ----------
+
+// look up the user if the name is unused create account.
+// returns { user, created } or null when the password is wrong
+const loginOrRegister = async function (username, password) {
+  const existing = await users.findOne({ username });
+
+  if (existing) {
+    const ok = await bcrypt.compare(password, existing.passwordHash);
+    return ok ? { user: existing, created: false } : null;
   }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const { insertedId } = await users.insertOne({ username, passwordHash, createdAt: new Date() });
+
+  return { user: { _id: insertedId, username }, created: true };
 };
 
-const allRows = async function () {
-  const docs = await collection.find({}).toArray();
-  return docs.map(toClient);
+// pages redirect to the login form
+const requireLogin = function (request, response, next) {
+  if (request.session.userId) return next();
+  if (request.originalUrl.startsWith("/api/")) return response.status(401).json({ error: "not logged in" });
+  response.redirect("/login.html");
 };
 
-app.use(express.static("public"));
+// ---------- middleware ----------
+
+// render sits behind a proxy, needed for secure cookies
+app.set("trust proxy", 1);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ client, dbName: process.env.MONGODB_DB || "a3" }),
+    cookie: { httpOnly: true, sameSite: "lax", secure: "auto", maxAge: 7 * 24 * 60 * 60 * 1000 },
+  }),
+);
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// refuse API requests until the database is ready
-app.use("/api", function (request, response, next) {
-  if (collection === null) return response.status(503).json({ error: "database not connected" });
-  next();
+app.get(["/", "/index.html"], requireLogin, function (request, response) {
+  response.sendFile(path.join(__dirname, "public", "index.html"));
+});
+app.use(express.static("public", { index: false }));
+
+// ---------- auth routes ----------
+
+app.post("/login", async function (request, response) {
+  const username = String(request.body.username || "").trim();
+  const password = String(request.body.password || "");
+
+  if (!username || !password) return response.redirect("/login.html?error=missing");
+
+  const result = await loginOrRegister(username, password);
+  if (!result) return response.redirect("/login.html?error=password");
+
+  request.session.userId = result.user._id.toString();
+  request.session.username = result.user.username;
+  // new accounts get told about it on the main page
+  response.redirect(result.created ? "/?created=1" : "/");
+});
+
+app.post("/logout", function (request, response) {
+  request.session.destroy(() => response.redirect("/login.html"));
+});
+
+// ---------- data routes ----------
+
+app.use("/api", requireLogin);
+
+const viewer = (request) => ({
+  _id: new ObjectId(request.session.userId),
+  username: request.session.username,
+});
+
+const allRows = async function (request) {
+  const docs = await conspiracies.find({}).sort({ _id: 1 }).toArray();
+  return docs.map((doc) => toClient(doc, viewer(request)._id));
+};
+
+app.get("/api/me", function (request, response) {
+  response.json({ username: request.session.username });
 });
 
 app.get("/api/data", async function (request, response) {
-  response.json(await allRows());
+  response.json(await allRows(request));
 });
 
 app.post("/api/add", async function (request, response) {
-  await collection.insertOne(buildRow(request.body));
-  response.json(await allRows());
+  await conspiracies.insertOne(buildRow(request.body, viewer(request)));
+  response.json(await allRows(request));
 });
 
 app.post("/api/edit", async function (request, response) {
   const _id = parseID(request.body.id);
-  if (_id) await collection.updateOne({ _id }, { $set: buildRow(request.body) });
-  response.json(await allRows());
+  const owner = viewer(request);
+  if (_id) await conspiracies.updateOne({ _id, userId: owner._id }, { $set: buildRow(request.body, owner) });
+  response.json(await allRows(request));
 });
 
 app.post("/api/delete", async function (request, response) {
   const _id = parseID(request.body.id);
-  if (_id) await collection.deleteOne({ _id });
-  response.json(await allRows());
+  if (_id) await conspiracies.deleteOne({ _id, userId: viewer(request)._id });
+  response.json(await allRows(request));
 });
 
 connect()

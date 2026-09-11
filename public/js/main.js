@@ -4,10 +4,13 @@
 let editing = null
 
 const load = async function () {
-  const response = await fetch('/api/data')
-  const data = await response.json()
+  const [me, response] = await Promise.all([fetch('/api/me'), fetch('/api/data')])
 
-  render(data)
+  // session expired or missing: back to the login page
+  if (response.status === 401) return location.replace('/login.html')
+
+  document.querySelector('#username').textContent = (await me.json()).username
+  render(await response.json())
 }
 
 const render = function (data) {
@@ -43,6 +46,8 @@ const cardFor = function (row) {
   del.onclick = remove
 
   actions.append(edit, del)
+  // only the owner gets edit / delete
+  actions.hidden = !row.mine
 
   const title = document.createElement('h2')
   title.className = 'card__title'
@@ -64,6 +69,7 @@ const cardFor = function (row) {
     actions,
     title,
     verdict,
+    line('posted by ' + row.username),
     line(row.conspirators.toLocaleString() + ' conspirators'),
     line(row.yearsRunning + ' years running'),
     meter,
@@ -162,6 +168,12 @@ window.onload = function () {
   }
 
   submitBtn.onclick = submit
+
+  // the server sends new accounts here with ?created=1
+  if (new URLSearchParams(location.search).get('created') === '1') {
+    document.querySelector('#created').hidden = false
+    history.replaceState(null, '', '/')
+  }
 
   load()
 }

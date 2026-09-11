@@ -1,20 +1,28 @@
 <!doctype html>
 <html lang='en'>
   <head>
-    <title>CS4241 Assignment 2</title>
+    <title>Conspiracy Viability Calculator</title>
     <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
     <script defer src='js/main.js'></script>
     <link rel='stylesheet' href='css/main.css' />
-    
-    <!-- get rid of favicon error -->
     <link rel='icon' href='data:;base64,iVBORw0KGgo=' />
   </head>
   <body>
-    <h1> Conspiracy Viability Calculator </h1>
+    <header class="topbar">
+      <h1> Conspiracy Viability Calculator </h1>
+      <form method="post" action="/logout" class="topbar__user">
+        <span>Signed in as <strong id="username"></strong></span>
+        <button type="submit">Log out</button>
+      </form>
+    </header>
+    <p id="created" class="notice" hidden>
+      No account existed for that username, so one was created.
+    </p>
     <ul id="list"></ul>
     <button id="newBtn" type="button">New Conspiracy +</button>
     <form id="entryForm" hidden>
-      <h1>New Conspiracy</h1>
+      <h2>New Conspiracy</h2>
       <label for="theory">Theory</label>
       <input type="text"  id="theory" name="theory">
       <label for="conspirators">Conspirators</label>
