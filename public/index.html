@@ -35,6 +35,13 @@
           <h2 id="formTitle">New Conspiracy</h2>
           <label for="theory">Theory</label>
           <input type="text" id="theory" name="theory" required />
+          <fieldset>
+            <legend>Category</legend>
+            <label><input type="radio" name="category" value="government" checked /> Government</label>
+            <label><input type="radio" name="category" value="corporate" /> Corporate</label>
+            <label><input type="radio" name="category" value="science" /> Science</label>
+            <label><input type="radio" name="category" value="other" /> Other</label>
+          </fieldset>
           <div class="grid">
             <div>
               <label for="conspirators">Conspirators</label>
@@ -45,6 +52,12 @@
               <input type="number" id="yearsRunning" name="yearsRunning" min="0" step="any" required />
             </div>
           </div>
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" rows="3" maxlength="500" placeholder="Evidence, sources, hunches..."></textarea>
+          <label>
+            <input type="checkbox" id="stillActive" name="stillActive" role="switch" checked />
+            Still active
+          </label>
           <footer>
             <button type="button" id="cancel" class="secondary">Cancel</button>
             <button type="submit" id="submit">Add Conspiracy</button>

@@ -52,9 +52,6 @@ const cardFor = function (row) {
   del.onclick = remove
 
   actions.append(edit, del)
-  // only the owner gets edit / delete
-  actions.hidden = !row.mine
-
   header.append(title, actions)
 
   const verdict = document.createElement('p')
@@ -69,13 +66,18 @@ const cardFor = function (row) {
   card.append(
     header,
     verdict,
-    line('posted by ' + row.username),
+    line(row.category + ' \u00b7 ' + (row.stillActive ? 'still active' : 'no longer active')),
     line(row.conspirators.toLocaleString() + ' conspirators'),
     line(row.yearsRunning + ' years running'),
     meter,
     line((row.exposureOdds * 100).toFixed(1) + '% chance it has leaked'),
     line('expected reveal in ' + formatYears(row.yearsUntilExposed))
   )
+  if (row.notes) {
+    const notes = line(row.notes)
+    notes.className = 'card__notes'
+    card.appendChild(notes)
+  }
 
   return card
 }
@@ -106,6 +108,9 @@ const startEdit = function (row) {
   document.querySelector('#theory').value = row.theory
   document.querySelector('#conspirators').value = row.conspirators
   document.querySelector('#yearsRunning').value = row.yearsRunning
+  document.querySelector('#notes').value = row.notes || ''
+  document.querySelector('#stillActive').checked = row.stillActive !== false
+  document.querySelector('[name="category"][value="' + (row.category || 'other') + '"]').checked = true
   document.querySelector('#formTitle').textContent = 'Edit Conspiracy'
   document.querySelector('#submit').textContent = 'Save Changes'
   openDialog()
@@ -134,8 +139,11 @@ const submit = async function (event) {
 
   const json = {
     theory: theory.value,
+    category: document.querySelector('[name="category"]:checked').value,
+    notes: document.querySelector('#notes').value,
     conspirators: Number(conspirators.value),
-    yearsRunning: Number(yearsRunning.value)
+    yearsRunning: Number(yearsRunning.value),
+    stillActive: document.querySelector('#stillActive').checked
   }
 
   if (editing !== null) json.id = editing

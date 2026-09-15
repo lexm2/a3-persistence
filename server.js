@@ -4,6 +4,10 @@ const express = require("express"),
   session = require("express-session"),
   { MongoStore } = require("connect-mongo"),
   bcrypt = require("bcryptjs"),
+  helmet = require("helmet"),
+  morgan = require("morgan"),
+  compression = require("compression"),
+  rateLimit = require("express-rate-limit"),
   path = require("path"),
   { MongoClient, ObjectId } = require("mongodb"),
   app = express(),
@@ -33,20 +37,25 @@ const verdictFor = function (odds) {
   return "BUSTED";
 };
 
+const CATEGORIES = ["government", "corporate", "science", "other"];
+
 const buildRow = function (body, owner) {
   const theory = String(body.theory || "").trim() || "untitled";
+  const category = CATEGORIES.includes(body.category) ? body.category : "other";
+  const notes = String(body.notes || "").trim().slice(0, 500);
   const conspirators = Math.max(1, Math.round(Number(body.conspirators)) || 1);
   const yearsRunning = Math.max(0, Number(body.yearsRunning) || 0);
+  const stillActive = body.stillActive === true || body.stillActive === "on";
 
   return Object.assign(
-    { userId: owner._id, username: owner.username, theory, conspirators, yearsRunning },
+    { userId: owner._id, theory, category, notes, conspirators, yearsRunning, stillActive },
     deriveFields(conspirators, yearsRunning),
   );
 };
 
-const toClient = function (doc, viewerId) {
+const toClient = function (doc) {
   const { _id, userId, ...rest } = doc;
-  return { id: _id.toString(), mine: userId.equals(viewerId), ...rest };
+  return { id: _id.toString(), ...rest };
 };
 
 const parseID = function (id) {
@@ -101,6 +110,9 @@ const requireLogin = function (request, response, next) {
 // render sits behind a proxy, needed for secure cookies
 app.set("trust proxy", 1);
 
+app.use(helmet());
+app.use(morgan("tiny"));
+app.use(compression());
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -121,7 +133,10 @@ app.use("/css/pico", express.static(path.join(__dirname, "node_modules/@picocss/
 
 // ---------- auth routes ----------
 
-app.post("/login", async function (request, response) {
+// slow down password guessing
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20 });
+
+app.post("/login", loginLimiter, async function (request, response) {
   const username = String(request.body.username || "").trim();
   const password = String(request.body.password || "");
 
@@ -144,14 +159,12 @@ app.post("/logout", function (request, response) {
 
 app.use("/api", requireLogin);
 
-const viewer = (request) => ({
-  _id: new ObjectId(request.session.userId),
-  username: request.session.username,
-});
+const viewer = (request) => ({ _id: new ObjectId(request.session.userId) });
 
+// only the logged in user's own rows
 const allRows = async function (request) {
-  const docs = await conspiracies.find({}).sort({ _id: 1 }).toArray();
-  return docs.map((doc) => toClient(doc, viewer(request)._id));
+  const docs = await conspiracies.find({ userId: viewer(request)._id }).sort({ _id: 1 }).toArray();
+  return docs.map(toClient);
 };
 
 app.get("/api/me", function (request, response) {
